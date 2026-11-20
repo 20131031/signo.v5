@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>시그노 (SIGNO) — 수학 풀이 AI</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" />
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+  <style>
+    body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif; }
+    .prose pre { background: #1e293b; color: #f8fafc; padding: 0.75rem; border-radius: 0.5rem; overflow-x: auto; }
+    .prose code { background: #f1f5f9; padding: 0.15rem 0.35rem; border-radius: 0.25rem; font-size: 0.9em; }
+    .prose pre code { background: transparent; padding: 0; color: inherit; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col">
+  <!-- 상단 헤더 -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-20">
+    <div class="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="w-8 h-8 rounded-lg bg-indigo-600 text-white font-bold flex items-center justify-center">Σ</span>
+        <span class="font-bold text-lg tracking-tight">시그노 <span class="text-xs font-medium text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">SIGNO</span></span>
+      </div>
+      <div class="flex items-center gap-2">
+        <select id="levelSelect" class="text-sm border border-slate-300 rounded-lg px-2.5 py-1.5 bg-white">
+          <option value="자동 수준">자동 수준</option>
+          <option value="초등 수학">초등 수학</option>
+          <option value="중등 수학">중등 수학</option>
+          <option value="고등 수학">고등 수학</option>
+        </select>
+        <button id="newChatBtn" type="button" class="text-sm bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg font-medium">
+          + 새 채팅
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 오류 배너 -->
+  <div id="errorBanner" class="hidden max-w-4xl w-full mx-auto px-4 pt-3">
+    <div class="bg-red-600 text-white text-sm rounded-xl px-4 py-3 shadow flex items-start justify-between gap-3">
+      <div id="errorText" class="break-words whitespace-pre-wrap leading-relaxed"></div>
+      <button id="closeErrorBtn" type="button" class="text-white/80 hover:text-white font-bold shrink-0">✕</button>
+    </div>
+  </div>
+
+  <!-- 대화 영역 -->
+  <main id="chatContainer" class="flex-1 max-w-4xl w-full mx-auto px-4 py-6 space-y-5 overflow-y-auto">
+    <div id="emptyState" class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
+      <h1 class="text-xl font-bold text-slate-900">시그노(SIGNO)에게 수학 문제를 바로 물어보세요!</h1>
+      <p class="text-sm text-slate-600 leading-relaxed">
+        문제 사진을 찍어 올리거나, 캡처 후 <strong>Ctrl+V</strong>로 붙여넣거나, 수식을 입력하면 핵심 개념부터 풀이 과정까지 단계별로 설명해 드립니다.
+      </p>
+      <div class="flex flex-wrap gap-2 pt-1">
+        <button type="button" class="sample-btn text-xs bg-slate-100 hover:bg-slate-200 text-slate-800 px-3 py-2 rounded-xl border border-slate-200"
+          data-prompt="이차방정식 x^2 - 5x + 6 = 0 의 두 근과 풀이 과정을 쉽게 설명해 주세요.">
+          중3 · 이차방정식 풀이
+        </button>
+        <button type="button" class="sample-btn text-xs bg-slate-100 hover:bg-slate-200 text-slate-800 px-3 py-2 rounded-xl border border-slate-200"
+          data-prompt="함수 f(x) = x^3 - 3x^2 + 2 의 극댓값과 극솟값을 미분을 이용해 구하고, 그래프의 개형을 설명해줘.">
+          고2 · 삼차함수 극값과 개형
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- 하단 입력창 -->
+  <footer class="bg-white border-t border-slate-200 sticky bottom-0 z-20">
+    <div class="max-w-4xl mx-auto px-4 py-3 space-y-2">
+      <div id="previewBox" class="hidden items-center gap-3 bg-slate-100 p-2 rounded-xl border border-slate-200">
+        <img id="previewImg" alt="업로드된 문제 미리보기" class="h-16 w-auto rounded-lg object-contain bg-white border border-slate-200" />
+        <span class="text-xs text-slate-600 flex-1">이미지가 첨부되었습니다.</span>
+        <button id="removeImgBtn" type="button" class="text-xs bg-white hover:bg-red-50 text-red-600 border border-slate-300 px-2.5 py-1 rounded-lg">
+          제거
+        </button>
+      </div>
+
+      <div class="flex items-end gap-2">
+        <label class="cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm px-3 py-2.5 rounded-xl border border-slate-300 shrink-0">
+          사진 삽입
+          <input id="fileInput" type="file" accept="image/*" class="hidden" />
+        </label>
+        <textarea id="promptInput" rows="2" placeholder="수학 문제를 입력하거나 사진/캡처(Ctrl+V)를 붙여넣으세요..."
+          class="flex-1 resize-none border border-slate-300 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+        <button id="sendBtn" type="button"
+          class="bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-400 text-white text-sm font-medium px-4 py-2.5 rounded-xl shrink-0">
+          풀이 시작
+        </button>
+      </div>
+      <div class="text-[11px] text-slate-400">
+        프록시: https://signo-proxy.yxuxeung.workers.dev/ · 빌드 v5
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const PROXY_BASE = "https://signo-proxy.yxuxeung.workers.dev";
+    const ENDPOINT_CANDIDATES = [
+      "/v1beta/models/gemini-2.5-flash:generateContent",
+      "/v1beta/models/gemini-2.5-flash-lite:generateContent",
+      "/v1beta/models/gemini-2.0-flash:generateContent",
+      "/v1beta/models/gemini-2.0-flash-lite:generateContent",
+      "/v1/models/gemini-2.5-flash:generateContent",
+      "/v1/models/gemini-2.0-flash:generateContent"
+    ];
+
+    const chatContainer = document.getElementById("chatContainer");
+    const emptyState = document.getElementById("emptyState");
+    const promptInput = document.getElementById("promptInput");
+    const sendBtn = document.getElementById("sendBtn");
+    const fileInput = document.getElementById("fileInput");
+    const previewBox = document.getElementById("previewBox");
+    const previewImg = document.getElementById("previewImg");
+    const removeImgBtn = document.getElementById("removeImgBtn");
+    const newChatBtn = document.getElementById("newChatBtn");
+    const levelSelect = document.getElementById("levelSelect");
+    const errorBanner = document.getElementById("errorBanner");
+    const errorText = document.getElementById("errorText");
+    const closeErrorBtn = document.getElementById("closeErrorBtn");
+
+    let attachedImage = null;
+    let history = [];
+    let isSending = false;
+
+    function showError(msg) {
+      errorText.textContent = msg;
+      errorBanner.classList.remove("hidden");
+    }
+
+    function hideError() {
+      errorBanner.classList.add("hidden");
+      errorText.textContent = "";
+    }
+
+    closeErrorBtn.addEventListener("click", hideError);
+
+    function setAttachedImage(file) {
+      if (!file || !file.type.startsWith("image/")) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result;
+        const base64 = dataUrl.split(",")[1];
+        attachedImage = { mimeType: file.type, base64, dataUrl };
+        previewImg.src = dataUrl;
+        previewBox.classList.remove("hidden");
+        previewBox.classList.add("flex");
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function clearAttachedImage() {
+      attachedImage = null;
+      fileInput.value = "";
+      previewImg.src = "";
+      previewBox.classList.add("hidden");
+      previewBox.classList.remove("flex");
+    }
+
+    fileInput.addEventListener("change", (e) => {
+      if (e.target.files && e.target.files[0]) setAttachedImage(e.target.files[0]);
+    });
+
+    removeImgBtn.addEventListener("click", clearAttachedImage);
+
+    document.addEventListener("paste", (e) => {
+      const items = e.clipboardData?.items || [];
+      for (const item of items) {
+        if (item.type && item.type.startsWith("image/")) {
+          const blob = item.getAsFile();
+          if (blob) {
+            setAttachedImage(blob);
+            break;
+          }
+        }
+      }
+    });
+
+    document.querySelectorAll(".sample-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        promptInput.value = btn.dataset.prompt || "";
+        promptInput.focus();
+      });
+    });
+
+    newChatBtn.addEventListener("click", () => {
+      history = [];
+      clearAttachedImage();
+      hideError();
+      Array.from(chatContainer.children).forEach((child) => {
+        if (child !== emptyState) child.remove();
+      });
+      emptyState.classList.remove("hidden");
+    });
+
+    function appendUserBubble(text, imageDataUrl) {
+      emptyState.classList.add("hidden");
+      const wrap = document.createElement("div");
+      wrap.className = "flex justify-end";
+
+      const bubble = document.createElement("div");
+      bubble.className = "max-w-[85%] bg-indigo-600 text-white rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm space-y-2";
+
+      if (imageDataUrl) {
+        const img = document.createElement("img");
+        img.src = imageDataUrl;
+        img.alt = "첨부된 문제";
+        img.className = "max-h-60 rounded-lg bg-white p-1";
+        bubble.appendChild(img);
+      }
+      if (text) {
+        const p = document.createElement("div");
+        p.className = "text-sm whitespace-pre-wrap";
+        p.textContent = text;
+        bubble.appendChild(p);
+      }
+
+      wrap.appendChild(bubble);
+      chatContainer.appendChild(wrap);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    function appendAssistantBubble() {
+      const wrap = document.createElement("div");
+      wrap.className = "flex justify-start";
+
+      const bubble = document.createElement("div");
+      bubble.className = "max-w-[90%] bg-white border border-slate-200 text-slate-900 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm prose prose-sm";
+      bubble.innerHTML = `<span class="text-slate-400">문제를 분석하고 풀이 중입니다...</span>`;
+
+      wrap.appendChild(bubble);
+      chatContainer.appendChild(wrap);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+      return bubble;
+    }
+
+    function renderMarkdownAndMath(el, markdownText) {
+      el.innerHTML = marked.parse(markdownText || "");
+      if (typeof renderMathInElement === "function") {
+        renderMathInElement(el, {
+          delimiters: [
+            { left: "$$", right: "$$", display: true },
+            { left: "$", right: "$", display: false },
+            { left: "\\[", right: "\\]", display: true },
+            { left: "\\(", right: "\\)", display: false }
+          ],
+          throwOnError: false
+        });
+      }
+    }
+
+    async function callGeminiViaProxy(contents, systemInstruction) {
+      const base = PROXY_BASE.replace(/\/+$/, "");
+      const logs = [];
+
+      for (const path of ENDPOINT_CANDIDATES) {
+        const url = `${base}${path}`; try { const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ systemInstruction: { parts: [{ text: systemInstruction }] }, contents }) });  const rawText = await res.text(); if (res.ok) { const data = JSON.parse(rawText); const replyText = data?.candidates?.[0]?.content?.parts ?.map((p) => p.text \vert{}\vert{} "") .join("") .trim(); if (replyText) { return replyText; } logs.push(`${path} -> 200 OK (빈 텍스트)`);
+          } else {
+            logs.push(`${path} -> HTTP${res.status}: ${rawText.slice(0, 140)}`); if (res.status === 401 \vert{}\vert{} res.status === 403) { break; } } } catch (netErr) { logs.push(`${path}
